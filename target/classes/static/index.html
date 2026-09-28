@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BloodBank — Inventory & Donor Eligibility Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-container">
+      <div class="logo-area">
+        <span class="logo-icon">🩸</span>
+        <div>
+          <h1>BloodBank Inventory & Donor Tracker</h1>
+          <p>Real-Time Stock Management • FEFO Issuance • Donor Eligibility</p>
+        </div>
+      </div>
+      <div class="server-status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Checking Backend...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- App Container -->
+  <main class="app-container">
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" aria-label="Main Navigation">
+      <button class="tab-btn active" data-tab="tab-stock">📊 Stock Dashboard</button>
+      <button class="tab-btn" data-tab="tab-donors">👤 Donor Directory</button>
+      <button class="tab-btn" data-tab="tab-donations">🩸 Record Donation & Eligibility</button>
+      <button class="tab-btn" data-tab="tab-issue">🏥 Issue Blood (FEFO)</button>
+      <button class="tab-btn" data-tab="tab-expiring">⚠️ Expiring Inventory</button>
+    </nav>
+
+    <!-- TAB 1: Stock Dashboard -->
+    <section id="tab-stock" class="tab-panel active">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-info">
+            <h3>Total Usable Units</h3>
+            <div class="metric-value" id="metricTotalUnits">0</div>
+          </div>
+          <div class="metric-icon">📦</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-info">
+            <h3>Active Donors</h3>
+            <div class="metric-value" id="metricActiveDonors">0</div>
+          </div>
+          <div class="metric-icon">👥</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-info">
+            <h3>Expiring in 7 Days</h3>
+            <div class="metric-value" id="metricExpiringCount" style="color: var(--warning);">0</div>
+          </div>
+          <div class="metric-icon">⚠️</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-info">
+            <h3>Out of Stock Groups</h3>
+            <div class="metric-value" id="metricCriticalGroups" style="color: var(--danger);">0</div>
+          </div>
+          <div class="metric-icon">🚨</div>
+        </div>
+      </div>
+
+      <div class="card-section">
+        <div class="card-title">
+          <span>Live Inventory by Blood Group</span>
+          <button class="btn btn-secondary" onclick="loadStock()">🔄 Refresh Stock</button>
+        </div>
+        <div class="stock-grid" id="stockGridContainer">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: Donor Directory -->
+    <section id="tab-donors" class="tab-panel">
+      <div class="card-section">
+        <div class="card-title">Register New Donor</div>
+        <form id="addDonorForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="donorName">Full Name *</label>
+              <input type="text" id="donorName" required placeholder="e.g. Arun Kumar">
+            </div>
+
+            <div class="form-group">
+              <label for="donorPhone">Phone Number (10 Digits) *</label>
+              <input type="tel" id="donorPhone" required pattern="[0-9]{10}" maxlength="10" placeholder="e.g. 9876543210">
+            </div>
+
+            <div class="form-group">
+              <label for="donorAge">Age (18 - 65) *</label>
+              <input type="number" id="donorAge" required min="18" max="65" placeholder="e.g. 25">
+            </div>
+
+            <div class="form-group">
+              <label for="donorBloodGroup">Blood Group *</label>
+              <select id="donorBloodGroup" required>
+                <option value="">-- Select Blood Group --</option>
+                <option value="A_POSITIVE">A+</option>
+                <option value="A_NEGATIVE">A-</option>
+                <option value="B_POSITIVE">B+</option>
+                <option value="B_NEGATIVE">B-</option>
+                <option value="AB_POSITIVE">AB+</option>
+                <option value="AB_NEGATIVE">AB-</option>
+                <option value="O_POSITIVE">O+</option>
+                <option value="O_NEGATIVE">O-</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top: 1.25rem;">
+            <button type="submit" class="btn btn-primary">➕ Register Donor</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card-section">
+        <div class="card-title">Registered Donors Directory</div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Age</th>
+                <th>Blood Group</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="donorsTableBody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Record Donation & Eligibility -->
+    <section id="tab-donations" class="tab-panel">
+      <!-- Eligibility Check -->
+      <div class="card-section">
+        <div class="card-title">Check Donor Eligibility (90-Day Rule)</div>
+        <div class="form-grid" style="align-items: flex-end;">
+          <div class="form-group">
+            <label for="eligibilityDonorSelect">Select Donor</label>
+            <select id="eligibilityDonorSelect">
+              <option value="">-- Select Donor --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <button type="button" class="btn btn-secondary" id="btnCheckEligibility">🔍 Check Eligibility</button>
+          </div>
+        </div>
+        <div id="eligibilityResult"></div>
+      </div>
+
+      <!-- Record Donation -->
+      <div class="card-section">
+        <div class="card-title">Record Blood Donation</div>
+        <form id="recordDonationForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="donationDonorSelect">Donor *</label>
+              <select id="donationDonorSelect" required>
+                <option value="">-- Select Donor --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="collectionDate">Collection Date *</label>
+              <input type="date" id="collectionDate" required>
+            </div>
+
+            <div class="form-group">
+              <label for="donationUnits">Units / Bags *</label>
+              <input type="number" id="donationUnits" required min="1" value="1">
+            </div>
+          </div>
+
+          <p id="expiryPreview" style="margin-top: 1rem; font-size: 0.9rem; color: var(--primary); font-weight: 600;">
+            Calculated Expiry Date: -- (42 days shelf life)
+          </p>
+
+          <div style="margin-top: 1.25rem;">
+            <button type="submit" class="btn btn-primary">🩸 Save Donation & Update Stock</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 4: Issue Blood -->
+    <section id="tab-issue" class="tab-panel">
+      <div class="card-section">
+        <div class="card-title">Issue Blood Against Request (FEFO Protocol)</div>
+        <form id="issueBloodForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="issueBloodGroup">Required Blood Group *</label>
+              <select id="issueBloodGroup" required>
+                <option value="">-- Select Blood Group --</option>
+                <option value="A_POSITIVE">A+</option>
+                <option value="A_NEGATIVE">A-</option>
+                <option value="B_POSITIVE">B+</option>
+                <option value="B_NEGATIVE">B-</option>
+                <option value="AB_POSITIVE">AB+</option>
+                <option value="AB_NEGATIVE">AB-</option>
+                <option value="O_POSITIVE">O+</option>
+                <option value="O_NEGATIVE">O-</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="issuePatientName">Patient Name *</label>
+              <input type="text" id="issuePatientName" required placeholder="e.g. Patient A">
+            </div>
+
+            <div class="form-group">
+              <label for="issueUnits">Units Requested *</label>
+              <input type="number" id="issueUnits" required min="1" value="1">
+            </div>
+
+            <div class="form-group">
+              <label for="issueDate">Issue Date *</label>
+              <input type="date" id="issueDate" required>
+            </div>
+          </div>
+
+          <div style="margin-top: 1.25rem;">
+            <button type="submit" class="btn btn-primary">🏥 Process Blood Issue</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 5: Expiring Inventory -->
+    <section id="tab-expiring" class="tab-panel">
+      <div class="card-section">
+        <div class="card-title">
+          <span>Blood Units Expiring Within Next 7 Days</span>
+          <button class="btn btn-secondary" onclick="loadExpiringUnits()">🔄 Refresh Alert List</button>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Unit ID</th>
+                <th>Blood Group</th>
+                <th>Donor Info</th>
+                <th>Collection Date</th>
+                <th>Expiry Date</th>
+                <th>Countdown</th>
+                <th>Available Units</th>
+              </tr>
+            </thead>
+            <tbody id="expiringTableBody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
